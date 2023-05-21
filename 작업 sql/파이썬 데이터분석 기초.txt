@@ -1,0 +1,8 @@
+-파이썬 결측값제거
+
+dropna()
+-NaN값을 가지고있는 행을 삭제
+but 실제 데이터를 삭제하지는 않고 NaN값을 가진 행을 제외한
+값을 반환
+-실제 값을 삭제되도록 하고싶으면
+table_name.dropna(inplace = true)

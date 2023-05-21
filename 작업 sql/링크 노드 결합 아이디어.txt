@@ -1,0 +1,211 @@
+node table -->> link table 
+
+1. TB_node str_node, end_node << TB_node 테이블의 id가 들어가도록 외래키 설정
+
+FOREIGN KEY (strt_node_id) REFERENCES TB_node (id)
+FOREIGN KEY (end_node_id) REFERENCES TB_node (id)
+
+2. st_startpoint (l1 linestring), ST_EndPoint (l1 LineString) 함수 사용
+
+반환된 point의 좌표와 겹치는 TB_node의 id를 각각 컬럼으로 넣어준다.
+
+select astext(geom) from public.TB_LINK
+
+----기각----
+
+ST_StartPoint — LINESTRING 도형의 첫 번째 포인트를 POINT로 반환합니다.
+
+ST_EndPoint — LINESTRING 또는 CIRCULARLINESTRING 도형의 마지막 포인트를 POINT로 반환합니다.
+
+ST_X — 포인트의 X 좌표를 반환합니다. X 좌표가 없는 경우 NULL을 반환합니다. 포인트만 입력받을 수 있습니다.
+
+ST_Y — 포인트의 Y 좌표를 반환합니다. Y 좌표가 없는 경우 NULL을 반환합니다. 포인트만 입력받을 수 있습니다.
+
+- SELECT id,st_x(ST_StartPoint(geom)) AS startX,st_y(ST_StartPoint(geom))AS startY,st_x(ST_EndPoint(geom))AS EndX,st_y(ST_EndPoint(geom))AS EndY 
+
+  FROM PUBLIC."TB_LINK"
+- SELECT id ,st_astext(st_startpoint(geom)) as startpoint ,st_astext(st_endpoint(geom)) endpoint FROM PUBLIC."TB_LINK"
+TB_LINK의 양쪽 점 좌표 출력
+
+- SELECT id, st_x(geom), st_y(geom) FROM PUBLIC."tb_node"
+
+- SELECT id ,st_astext(geom) FROM PUBLIC.tb_node
+tb_node의 좌표 출력
+
+두개 비교해서 일치하는 애들 찾기....
+
+SELECT table1.col1, table1.col2, ..., table2.col1, table2.col2, ...
+
+FROM table1 [table1의 별칭]
+
+JOIN table2 [table2의 별칭] ON table1.col1 = table2.col2 
+
+210989.82892079238//449887.1351628685
+
+POINT(208005.4561441691 444852.4365972767) / POINT(207996.59706544786 444815.10190838063)
+
+
+검증
+-SELECT id, st_x(geom), st_y(geom) 
+FROM PUBLIC."tb_node"
+WHERE st_x(geom)=210989.82892079238  AND st_y(geom) = 449887.1351628685
+
+-SELECT id ,st_astext(geom) FROM PUBLIC.tb_node
+WHERE st_astext(geom) = 'POINT(201128.97758694002 457078.23928338016)'
+
+TB_LINK ,tb_node 테이블 조인
+
+SELECT PUBLIC."TB_LINK".id 링크id, PUBLIC."TB_LINK".st_astext(st_startpoint(PUBLIC."TB_LINK".geom)) 시작점,PUBLIC.tb_node.id 노드id, PUBLIC.tb_node.st_astext(PUBLIC.tb_node.geom) 노드좌표
+
+FROM PUBLIC."TB_LINK" 
+
+JOIN PUBLIC.tb_node  ON PUBLIC."TB_LINK".st_astext(st_startpoint(PUBLIC."TB_LINK".geom)) = PUBLIC.tb_node.st_astext(PUBLIC.tb_node.geom) 
+
+-------------연결-------------
+SELECT dblink_connect('testconnect', 'hostaddr=midas.uinetworks.kr post=15432 dbname=newdeal user=a5458zz password=a5458zz');
+
+
+
+
+SELECT * FROM dblink('testconnect', 'SELECT PUBLIC."TB_LINK".id 링크id, PUBLIC."TB_LINK".st_astext(st_startpoint(PUBLIC."TB_LINK".geom)) 시작점,PUBLIC.tb_node.id 노드id, PUBLIC.tb_node.st_astext(PUBLIC.tb_node.geom) 노드좌표
+
+FROM PUBLIC."TB_LINK" 
+
+JOIN PUBLIC.tb_node  ON PUBLIC."TB_LINK".st_astext(st_startpoint(PUBLIC."TB_LINK".geom)) = PUBLIC.tb_node.st_astext(PUBLIC.tb_node.geom) 
+') AS t1 (링크id INTEGER,시작점 char,노드id INTEGER,노드좌표 CHAR  )
+
+
+
+
+--------------------
+
+SELECT A.id 링크id ,st_astext(st_startpoint(A.geom)) 시작점, B.id 노드id, st_astext(B.geom) 노드값
+
+FROM "TB_LINK" A , tb_node B
+
+where st_astext(st_startpoint(A.geom)) = st_astext(B.geom)
+
+-----------
+
+SELECT A.id 링크id ,st_astext(st_endpoint(A.geom)) 끝점, B.id 노드id, st_astext(B.geom) 노드값
+
+FROM "TB_LINK" A , tb_node B
+
+where st_astext(st_endpoint(A.geom)) = st_astext(B.geom)
+
+-----------------------------------------------------------------------------------------------------------------
+insert into "TB_LINK" (strt_node_id)
+
+select id
+
+from tb_node
+
+where st_astext(st_endpoint("TB_LINK".geom)) = st_astext(tb_node.geom)
+
+실패
+---------------------------------------------------------------------------------------------
+update "TB_LINK" A
+set end_node_id = B.id
+FROM tb_node B
+where st_endpoint(A.geom) = B.geom
+
+- st_astext()는 우리가 좌표값을 보기 편하게 변환해주는 용도이므로 굳이 넣을필요 없음
+---------------------------------------------------------------------------------------------
+정리
+
+1. TB_LINK 테이블의 / strt_node_id , end_node_id 컬럼에 / tb_node 테이블의 / id값을 / 일치하는 좌표값에 알맞게 입력해주는 것이 목표
+2. TB_LINK 테이블과 tb_node의 geom 데이터를 본인이 알아보기 쉽게끔 st_astext()를 이용함.
+3. TB_LINK 테이블의 데이터들은 linestring으로 이루어져 있기때문에 st_startpoint(), st_endpoint()를 이용하여 시작점과 끝점을 구분해줌.
+ 
+- SELECT id, st_astext(st_startpoint(geom)), st_astext(st_endpoint(geom)) FROM "TB_LINK"
+
+- SELECT id ,st_astext(geom) FROM tb_node
+
+4. 이후 뽑아낸 좌표값이 해당 객체id와 일치하는지 검정 
+
+5. 목표에 일치하는 쿼리문 작성 
+update "TB_LINK" A
+set end_node_id = B.id
+FROM tb_node B
+where st_endpoint(A.geom) = B.geom
+
+- st_astext()는 우리가 좌표값을 보기 편하게 변환해주는 용도이므로 굳이 넣을필요 없음
+
+6. 성공적으로 등록 완료. 등록이 누락된 것들은 일일이 찾아서 수정 후 재등록 시도
+
+7. 해결
+------------------------------tb_grid 테이블에 실사 예정인, 예정일 넣기 -------------------------------------------
+
+update tb_grid set insp1_rde = '	2021-10-14	', insp1_rwkr = '	정혜지	' where grid_id = '	1019	';
+update tb_grid set insp1_rde = '	2021-10-13	', insp1_rwkr = '	권오민	' where grid_id = '	1031	';
+update tb_grid set insp1_rde = '	2021-11-03	', insp1_rwkr = '	정혜지	' where grid_id = '	1088	';
+update tb_grid set insp1_rde = '	2021-11-24	', insp1_rwkr = '	구재건	' where grid_id = '	1101	';
+update tb_grid set insp1_rde = '	2021-11-03	', insp1_rwkr = '	정혜지	' where grid_id = '	1163	';
+update tb_grid set insp1_rde = '	2021-11-03	', insp1_rwkr = '	정혜지	' where grid_id = '	1164	';
+update tb_grid set insp1_rde = '	2021-11-03	', insp1_rwkr = '	정혜지	' where grid_id = '	1167	';
+update tb_grid set insp1_rde = '	2021-11-09	', insp1_rwkr = '	박종혁	' where grid_id = '	1173	';
+update tb_grid set insp1_rde = '	2021-11-09	', insp1_rwkr = '	박종혁	' where grid_id = '	1176	';
+update tb_grid set insp1_rde = '	2021-11-05	', insp1_rwkr = '	박종혁	' where grid_id = '	1177	';
+update tb_grid set insp1_rde = '	2021-10-14	', insp1_rwkr = '	양선호	' where grid_id = '	1182	';
+update tb_grid set insp1_rde = '	2021-10-14	', insp1_rwkr = '	양선호	' where grid_id = '	1183	';
+update tb_grid set insp1_rde = '	2021-10-15	', insp1_rwkr = '	정혜지	' where grid_id = '	1234	';
+
+update tb_grid set insp1_rwkr ='a5458zz ' where insp1_rwkr = '권오민'
+update tb_grid set insp1_rwkr ='' where insp1_rwkr = '정혜지'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '구재건'
+update tb_grid set insp1_rwkr =' a96jonghyeok' where insp1_rwkr = '박종혁'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '양선호'
+update tb_grid set insp1_rwkr ='rlagofka1' where insp1_rwkr = '김해람'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '박수진'
+update tb_grid set insp1_rwkr ='shinja0829' where insp1_rwkr = '신재영'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '양선호'
+update tb_grid set insp1_rwkr ='eotjd350' where insp1_rwkr = '조대성'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '조성빈'
+update tb_grid set insp1_rwkr =' ' where insp1_rwkr = '한도연'
+
+-------------------------------------------------------------
+tp_cw, tp_sw true 체크 넣기
+
+update tt_node A
+SET tp_cw = 'true' 
+from tt_link B
+where (B.tp_cw = 'true' and A.id = CAST(B.strt_node_id AS INT)) ;	
+
+
+
+읍면동 넣기... 
+
+
+그리드안에 들어가있는 객체들의 grid_id 속성을 그 그리드id로 일괄 적용 
+
+1. link테이블에 node_id 매칭 (0)
+2. node테이블에 sw , cw 속성 매칭(0)
+3. link,node 테이블에 읍면동 경계에 맞춰 emd_cd , emd_nm 매칭 (진행중)
+4. 누락된 부분 수정하기 (진행중)
+5. 끊어져있는 링크 찾기 ???????
+----------------------------------------
+막다른 길 or 끊어진 길 찾기
+
+#각각의 노드id를 strt_node_id or end_node_id로 사용중인 링크의 갯수 파악
+ 
+update tt_node2 SET count_strt_node_id = i.C
+FROM (SELECT B.end_node_id AS strt_node, COUNT(B.end_node_id) AS C FROM tt_link B GROUP BY B.end_node_id) i
+WHERE tt_node2.id = cast(i.end_node AS INT)  ; 
+
+SELECT * FROM tt_node2 ;
+
+
+SELECT id, st_astext(st_pointN(geom,2)) FROM tt_link2 WHERE st_numpoints(geom) > 2 
+
+------------막다른 길 or 끊어진 길 찾기--------------
+
+select * from tb_node 
+(count_end_node_id IS NULL AND count_strt_node_id = 1) OR (count_strt_node_id IS NULL AND count_end_node_id =1)
+
+
+
+1. 출발,도착지의 좌표를 뽑는다.
+2. 출발,도착지의 
+
+
+

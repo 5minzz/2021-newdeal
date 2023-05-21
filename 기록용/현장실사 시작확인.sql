@@ -1,0 +1,1 @@
+SELECT * FROM "TB_LINK" WHERE insp1_de >= '2021-10-20

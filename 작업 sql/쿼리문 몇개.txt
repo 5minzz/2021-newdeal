@@ -1,0 +1,76 @@
+필수적으로 등록이 되어있어야 할 속성 4가지 중 한가지라도 누락되면 X
+
+>> 누락 또는 잘 못 입력된 링크 찾는 쿼리문 작성 ㄲ
+
+전체대상으로 속성값 누락된 링크 찾기 
+grid_id, link_code, c_wkr, c_de
+
+1) grid_id는 있는데 나머지중 1개라도 없는 링크 찾기
+grid_id is not null and (
+	link_code is null or
+	c_wkr is null or
+	c_de is null)
+
+2) c_de 가 2021-08-01 ~ 2021-08-31 사이에 있지않고 이상한 날짜가 입력되어있는 링크찾기
+
+이 범위 밖에있는 링크를 찾으면 됨
+grid_id is not null and  (
+(c_de  <'2021-08-01' and c_de >'2021-08-31') or c_de is null
+)
+
+c_de  <'2021-08-01' and c_de >'2021-08-31'
+
+3) link_code에 이상한 값이 들어가 있는 경우
+grid_id is not null and( 
+link_code != '0000'
+and link_code != '0001'
+and link_code != '0010'
+and link_code != '0011'
+and link_code != '0100'
+and link_code != '0101'
+and link_code != '0110'
+and link_code != '0111'
+and link_code != '1000'
+and link_code != '1001'
+and link_code != '1010'
+and link_code != '1011'
+and link_code != '1100'
+and link_code != '1101'
+and link_code != '1110'
+and link_code != '1111' 
+)
+
+4) 이웃해있는 링크들은 속성부여가 완료되었는데, 선택이 안돼서 속성부여가 안된 링크찾기?
+or 자동으로 이웃해있는 링크들의 속성을 따라가도록 한다??
+id+1  id-1 얘들은 속성부여
+id+1 union id-1 ??
+id 는 속성부여 x 
+ 
+5) c_wkr에 엉뚱한 아이디가 등록되어있을경우
+grid_id is not null and (
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' and
+c_wkr != 'a5458zz' 
+)
+
+6) 나머지 속성들은 대부분 등록 돼있는데 gird_id가 등록이 안된 링크찾기
+
+(link_code is not null or
+ c_wkr is not null or
+ c_de is not null) and grid_id is null
+
+7) link_code에 값이 들어가야하는데 link_id에 값이 들어가있는 경우??
+
+link_id is not null and link_code is null /
+
+link_id is not null and 
+link_id is not ''
+
+8)
